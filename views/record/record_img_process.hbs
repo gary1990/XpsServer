@@ -1,0 +1,98 @@
+{{#section 'css'}}
+
+{{/section}}
+
+<div class="container">
+    {{! this is comment}}
+    <div class="row">
+      <div id="img-div" class="col-md-12">
+          <img style="display: none;" id="img" src="{{value}}">
+      </div>
+    </div>
+    <div class="row">
+      <form id="imgContentForm" action="/records/img_content">
+          <input id="_recordId" type="hidden" name="_recordId" value="{{id}}"/>
+          <input id="_indexOf" type="hidden" name="_indexOf" value="{{key}}">
+          <div class="form-group">
+              <label for="recordContent" class="col-sm-2 control-label">图片信息</label>
+              <textarea id="imgContent" class="form-control" name="imgContent" rows="8"></textarea>
+          </div>
+          <div class="form-group">
+              <div class="col-sm-offset-2 col-sm-4">
+              <button type="submit" class="btn btn-default">提交</button> </div>
+          </div>
+      </form>
+    </div>
+</div>
+
+{{#section 'javascript'}}
+  <script src="/javascripts/lib/tiff.min.js"></script>
+  <script>
+      function convertTiff(tiffSrc, appendContainerId) {
+          appendContainerId = "#" + appendContainerId;
+          var xhr = new XMLHttpRequest();
+          xhr.responseType = 'arraybuffer';
+          xhr.open('GET', tiffSrc, true);
+          xhr.onreadystatechange = function (evtXHR) {
+              if (xhr.readyState == 4) {
+                  if (xhr.status == 200) {
+                  } else {
+                      console.log("不允许跨域请求。");
+                      $(appendContainerId).find("img").attr("style", "");
+                  }
+              }
+          };
+          xhr.onload = function (e) {
+              var tiff = new Tiff({buffer: xhr.response});
+              var canvas = tiff.toCanvas();
+              $(appendContainerId).append(canvas);
+          };
+          xhr.send();
+      }
+
+      $(document).ready(function() {
+        var imgUrl = $('#img').attr("src");
+        if (imgUrl.substring(imgUrl.lastIndexOf(".") + 1).toLowerCase() === "tif") {
+          convertTiff(imgUrl, "img-div");
+        } else {
+            $('#img').attr("style","");
+        }
+
+        $('#imgContentForm').on('submit', function (evt) {
+            evt.preventDefault();
+            var action = $(this).attr('action');
+            var _recordId = $("#_recordId").val();
+            var _indexOf = $("#_indexOf").val();
+            var imgContent = $("#imgContent").val();
+            var postData = {recordId: _recordId, indexOf: _indexOf, imgContent: imgContent};
+            $.ajax({
+                url: action,
+                type: 'POST',
+                data: postData,
+                dataType: 'json',
+                success: function (res, stat, xhr) {
+                  console.log("===success==");
+                  console.dir(res);
+                  console.dir(stat);
+                  window.location.replace(window.location.href);
+                },
+                error: function(jqXHR, textStatus, errorThrown){
+                    bootbox.dialog({
+                        message: "提交失败，点击[确定]刷新页面，或联系管理员",
+                        title: "Oh hoo!",
+                        buttons: {
+                          main: {
+                              label: "确定",
+                              className: "btn-primary",
+                              callback: function() {
+                                  window.location.replace(window.location.href);
+                              }
+                          }
+                        }
+                    });
+                }
+            });
+        });
+      });
+  </script>
+{{/section}}
